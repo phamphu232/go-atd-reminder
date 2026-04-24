@@ -1,0 +1,44 @@
+name: Go Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Chạy khi bạn push tag v1.0, v2.0...
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Quan trọng: Cho phép Action tạo Release và up file
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1' # Thay đổi version phù hợp với dự án của bạn
+          cache: true # Tự động lưu lại thư viện để lần build sau nhanh hơn
+
+      - name: Install dependencies
+        run: go mod download # Lệnh này bảo Go: "Hãy đọc file go.mod và tải hết thư viện về"
+
+      - name: Run Build Script
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+        # Giả sử script của bạn tạo ra các file trong thư mục ./dist hoặc file thực thi cụ thể
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          # Thay đổi đường dẫn bên dưới tới (các) file bạn muốn upload
+          files: |
+            build/windows-amd64/ATDReminder.exe
+            build/linux-amd64/ATDReminder
+            build/darwin-arm64/ATDReminder
+          body: "Bản build tự động từ tag ${{ github.ref_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
