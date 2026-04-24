@@ -16,7 +16,7 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     GOOS=${PLATFORM%/*}
     GOARCH=${PLATFORM#*/}
     
-    OUTPUT_NAME="$OUTPUT_DIR/$GOOS-$GOARCH/$APP_NAME"
+    OUTPUT_NAME="$OUTPUT_DIR/$GOOS-$GOARCH/$APP_NAME-$GOOS-$GOARCH"
     
     # Cấu hình LDFLAGS cơ bản để giảm dung lượng file (-s -w)
     # -s: xóa symbol table, -w: xóa debug info

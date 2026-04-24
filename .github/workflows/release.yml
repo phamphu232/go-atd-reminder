@@ -36,9 +36,9 @@ jobs:
         with:
           # Thay đổi đường dẫn bên dưới tới (các) file bạn muốn upload
           files: |
-            build/windows-amd64/ATDReminder.exe
-            build/linux-amd64/ATDReminder
-            build/darwin-arm64/ATDReminder
+            build/windows-amd64/ATDReminder-windows-amd64.exe
+            build/linux-amd64/ATDReminder-linux-amd64
+            build/darwin-arm64/ATDReminder-darwin-arm64
           body: "Bản build tự động từ tag ${{ github.ref_name }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
