@@ -112,7 +112,7 @@ func checkAttendance() {
 		}
 
 		hasCheckedInToday := atd != nil && atd.DateCheck == today
-		needsCheckOut := !hasCheckedInToday || !atd.CheckOut.Valid || atd.CheckOut.String < workEnd
+		needsCheckOut := hasCheckedInToday && (!atd.CheckOut.Valid || atd.CheckOut.String < workEnd)
 
 		if needsCheckOut {
 			log.Printf("ReminderCheckOut: %v, isWorking: %v, currentState.IsReminderCheckOut: %v, currentTime: %s, atd.CheckOut: %s, 	workEnd: %s, duration: %s, config.GetConfig().Delay: %d, atd.DateCheck: %s, today: %s", config.GetConfig().ReminderCheckOut, isWorking, currentState.IsReminderCheckOut, currentTime, atd.CheckOut.String, workEnd, duration, config.GetConfig().Delay, atd.DateCheck, today)

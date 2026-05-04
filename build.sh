@@ -8,7 +8,7 @@ PLATFORMS=("windows/amd64" "linux/amd64" "darwin/arm64" )
 # PLATFORMS=("windows/amd64") # Builld on Windows
 
 echo "Cleaning up previous builds..."
-rm -rf "$OUTPUT_DIR"
+# rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 for PLATFORM in "${PLATFORMS[@]}"; do
@@ -16,8 +16,9 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     GOOS=${PLATFORM%/*}
     GOARCH=${PLATFORM#*/}
     
-    OUTPUT_NAME="$OUTPUT_DIR/$GOOS-$GOARCH/$APP_NAME-$GOOS-$GOARCH"
-    
+    OUTPUT_NAME="$OUTPUT_DIR/$GOOS-$GOARCH/$APP_NAME-$(echo "$GOOS" | sed 's/./\U&/')$(echo "$GOARCH" | sed 's/./\U&/')"
+    rm -rf "$OUTPUT_NAME"
+
     # Cấu hình LDFLAGS cơ bản để giảm dung lượng file (-s -w)
     # -s: xóa symbol table, -w: xóa debug info
     CORE_LDFLAGS="-s -w"
