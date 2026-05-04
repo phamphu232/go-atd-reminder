@@ -78,7 +78,7 @@ func Load() {
 		configLock.Unlock()
 
 		data, _ := json.MarshalIndent(AppConfig, "", "    ")
-		_ = os.WriteFile(path, data, 0644)
+		_ = os.WriteFile(path, data, 0666)
 
 		if newInfo, err := os.Stat(path); err == nil {
 			lastModTime = newInfo.ModTime()

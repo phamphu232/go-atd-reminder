@@ -15,9 +15,9 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     # Tách GOOS và GOARCH
     GOOS=${PLATFORM%/*}
     GOARCH=${PLATFORM#*/}
-    
-    OUTPUT_NAME="$OUTPUT_DIR/$GOOS-$GOARCH/$APP_NAME-$(echo "$GOOS" | sed 's/./\U&/')$(echo "$GOARCH" | sed 's/./\U&/')"
-    rm -rf "$OUTPUT_NAME"
+
+    OUTPUT_NAME="$OUTPUT_DIR/$GOOS-$GOARCH/$APP_NAME-$(echo "$GOOS" | awk '{print toupper(substr($0,1,1))substr($0,2)}')$(echo "$GOARCH" | awk '{print toupper(substr($0,1,1))substr($0,2)}')"
+    rm -f "$OUTPUT_NAME"
 
     # Cấu hình LDFLAGS cơ bản để giảm dung lượng file (-s -w)
     # -s: xóa symbol table, -w: xóa debug info
@@ -29,7 +29,7 @@ for PLATFORM in "${PLATFORMS[@]}"; do
         CURRENT_LDFLAGS="$CORE_LDFLAGS -H=windowsgui"
         # CURRENT_LDF`LAGS="$CORE_LDFLAGS"
     else
-        CGO_ENABLED=1
+        CGO_ENABLED=0
         CURRENT_LDFLAGS="$CORE_LDFLAGS"
     fi
 

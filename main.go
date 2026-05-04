@@ -56,13 +56,30 @@ func main() {
 
 	if len(os.Args) > 1 {
 		service.Control(s, os.Args[1])
-		return
+		if os.Args[1] != "start" {
+			return
+		}
+	}
+
+	status, err := s.Status()
+	if err != nil {
+		log.Println(err)
+		runAsAdmin(exePath, "install")
+		log.Println("Service ATDReminder installed successfully")
+	} else {
+		log.Printf("Service ATDReminder status: %v", status)
+		if service.Interactive() {
+			runAsAdmin(exePath, "reinstall")
+			time.Sleep(3 * time.Second)
+			log.Println("Service ATDReminder reinstalled successfully")
+		}
 	}
 
 	lockPath := filepath.Join(filepath.Dir(exePath), ".pid.lock")
 	fileLock := flock.New(lockPath)
 	locked, err := fileLock.TryLock()
 	if err != nil || !locked {
+		log.Println("ATDReminder is already running...")
 		return
 	}
 	defer fileLock.Unlock()
