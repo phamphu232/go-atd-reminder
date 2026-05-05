@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -90,6 +91,22 @@ func baseDir() string {
 	return baseDir
 }
 
+func isDirEmpty(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1)
+
+	if err == io.EOF {
+		return true, nil
+	}
+
+	return false, err
+}
+
 func cleanOldFiles(rootPath string, days int) {
 	cutoff := time.Now().AddDate(0, 0, -days)
 
@@ -100,6 +117,7 @@ func cleanOldFiles(rootPath string, days int) {
 
 		if !info.IsDir() {
 			if info.ModTime().Before(cutoff) {
+				log.Printf("Remove old file: %s, %s", info.ModTime(), path)
 				os.Remove(path)
 			}
 		}
@@ -109,7 +127,11 @@ func cleanOldFiles(rootPath string, days int) {
 
 	filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if info != nil && info.IsDir() && path != rootPath {
-			os.Remove(path)
+			isDirEmpty, _ := isDirEmpty(path)
+			if isDirEmpty && info.ModTime().Before(cutoff) {
+				log.Printf("Remove empty directory: %s, %s", info.ModTime(), path)
+				os.Remove(path)
+			}
 		}
 
 		return nil

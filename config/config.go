@@ -79,6 +79,7 @@ func Load() {
 
 		data, _ := json.MarshalIndent(AppConfig, "", "    ")
 		_ = os.WriteFile(path, data, 0666)
+		os.Chmod(path, 0666)
 
 		if newInfo, err := os.Stat(path); err == nil {
 			lastModTime = newInfo.ModTime()

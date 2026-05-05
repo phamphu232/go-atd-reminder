@@ -22,7 +22,7 @@ func Connect() {
 		log.Fatal("Error when config database:", err)
 	}
 
-	DB.SetMaxOpenConns(2)
+	DB.SetMaxOpenConns(1)
 	DB.SetMaxIdleConns(1)
 	DB.SetConnMaxLifetime(5 * time.Minute)
 	if err := DB.Ping(); err != nil {
@@ -30,4 +30,10 @@ func Connect() {
 	}
 
 	fmt.Println("Database is ready!")
+}
+
+func Close() {
+	if DB != nil {
+		DB.Close()
+	}
 }

@@ -13,7 +13,7 @@ func runAsAdmin(exePath string, args string) error {
 
 	switch args {
 	case "reinstall":
-		cmd = fmt.Sprintf("%q stop && %q uninstall && %q install", exePath, exePath, exePath)
+		cmd = fmt.Sprintf("%q stop && %q uninstall && %q install && %q start", exePath, exePath, exePath, exePath)
 	default:
 		cmd = fmt.Sprintf("%q %s", exePath, args)
 	}
