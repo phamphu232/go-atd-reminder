@@ -4,66 +4,69 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
-func IsScreenLocked() bool {
-	// WARNING: these are not tested
-	switch os.Getenv("XDG_CURRENT_DESKTOP") {
-	case "Unity":
-		return check(
-			"gdbus call -e -d com.canonical.Unity -o /com/canonical/Unity/Session -m com.canonical.Unity.Session.IsLocked",
-			"true",
-		)
+func IsScreenLocked(username string) bool {
+	uidByte, err := exec.Command("id", "-u", username).Output()
+	if err != nil {
+		return false
+	}
+	uidStr := strings.TrimSpace(string(uidByte))
+	uid, _ := strconv.Atoi(uidStr)
+
+	de := detectDE(username)
+	dbusAddr := fmt.Sprintf("unix:path=/run/user/%d/bus", uid)
+
+	var cmdStr string
+	var contains string
+
+	switch de {
 	case "KDE":
-		return check(
-			"qdbus org.kde.screensaver /ScreenSaver org.freedesktop.ScreenSaver.GetActive",
-			"true",
-		)
+		cmdStr = "qdbus org.freedesktop.ScreenSaver /ScreenSaver org.freedesktop.ScreenSaver.GetActive"
+		contains = "true"
 	case "XFCE":
-		return check(
-			"xfconf-query -c xfce4-session -p /general/LockDialogIsVisible",
-			"true",
-		)
-	case "LXQt":
-	case "MATE":
-		return check(
-			"mate-screensaver-command -q",
-			"is active",
-		)
-	case "Cinnamon":
-		return check(
-			"gdbus call --session --dest org.Cinnamon.ScreenSaver --object-path /org/Cinnamon/ScreenSaver --method org.Cinnamon.ScreenSaver.GetActive",
-			"true",
-		)
-	case "LXDE":
-	case "Deepin":
-		return check(
-			"dbus-send --session --dest=com.deepin.ScreenSaver --type=method_call --print-reply /com/deepin/ScreenSaver com.deepin.ScreenSaver.GetStatus",
-			"true",
-		)
-	default: // default to gnome
-		return check(
-			"gdbus call --session --dest org.gnome.ScreenSaver --object-path /org/gnome/ScreenSaver --method org.gnome.ScreenSaver.GetActive",
-			"true",
-		)
+		cmdStr = "xfconf-query -c xfce4-session -p /general/LockDialogIsVisible"
+		contains = "true"
+	default: // GNOME
+		cmdStr = "gdbus call --session --dest org.gnome.ScreenSaver --object-path /org/gnome/ScreenSaver --method org.gnome.ScreenSaver.GetActive"
+		contains = "true"
 	}
 
-	return false
+	return checkAsUser(uid, dbusAddr, cmdStr, contains)
 }
 
-func check(cmdStr, contains string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+func checkAsUser(uid int, dbusAddr, cmdStr, contains string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	cmd := strings.Split(cmdStr, " ")
+	parts := strings.Split(cmdStr, " ")
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 
-	// This will output a list of tasks currently running
-	output, _ := exec.CommandContext(ctx, cmd[0], cmd[1:]...).Output()
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(uid)},
+	}
 
-	// This will check if LogonUI.exe is in the list
+	cmd.Env = append(os.Environ(), "DBUS_SESSION_BUS_ADDRESS="+dbusAddr)
+
+	output, _ := cmd.Output()
 	return strings.Contains(string(output), contains)
+}
+
+func detectDE(username string) string {
+	out, _ := exec.Command("ps", "-u", username).Output()
+	psOut := string(out)
+	if strings.Contains(psOut, "gnome-shell") {
+		return "GNOME"
+	}
+	if strings.Contains(psOut, "ksmserver") {
+		return "KDE"
+	}
+	return "GNOME"
 }

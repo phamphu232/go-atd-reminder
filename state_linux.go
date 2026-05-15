@@ -40,11 +40,9 @@ func getLoginctlProperty(user, property string) string {
 
 func IsWorking(user string) bool {
 	isActive := getLoginctlProperty(user, "State") == "active"
-	isIdle := getLoginctlProperty(user, "IdleHint") != "no"
+	isWorking := isActive && !IsScreenLocked(user)
 
-	isWorking := isActive && !isIdle && !IsScreenLocked()
-
-	// log.Printf("UserIsWorking: %v, IsIdle: %v, IsLocked: %v", isWorking, isIdle, IsScreenLocked())
+	// log.Printf("UserIsWorking: %v, IsLocked: %v", isWorking, IsScreenLocked(user))
 
 	return isWorking
 }

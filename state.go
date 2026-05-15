@@ -83,12 +83,16 @@ func checkAttendance() {
 	currentState.mu.Lock()
 	defer currentState.mu.Unlock()
 
+	if currentState.LastChangeTime.IsZero() {
+		currentState.LastChangeTime = time.Now()
+	}
+
 	duration := now.Sub(currentState.LastChangeTime)
 
 	if isWorking != currentState.IsWorking {
-		log.Printf("UserIsWorking: %v, IsLocked: %v, LastChangeTime: %s, Duration: %s", isWorking, IsScreenLocked(), currentState.LastChangeTime, duration)
 		currentState.IsWorking = isWorking
 		currentState.LastChangeTime = time.Now()
+		log.Printf("UserIsWorking: %v, IsLocked: %v, LastChangeTime: %s, Duration: %v", isWorking, IsScreenLocked(config.GetConfig().UserPC), currentState.LastChangeTime.Format("2006-01-02 15:04:05"), duration)
 	}
 
 	if config.GetConfig().ReminderCheckIn && isWorking && !currentState.IsReminderCheckIn && currentTime < workEnd && duration.Seconds() > float64(config.GetConfig().Delay) {

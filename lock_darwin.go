@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func IsScreenLocked() bool {
+func IsScreenLocked(username string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 

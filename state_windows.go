@@ -31,7 +31,7 @@ func getUserState(user string) bool {
 
 func IsWorking(user string) bool {
 	isActive := getUserState(user)
-	isWorking := isActive && !IsScreenLocked()
+	isWorking := isActive && !IsScreenLocked(user)
 
 	// log.Printf("UserIsWorking: %v, IsLocked: %v", isWorking, IsScreenLocked())
 
