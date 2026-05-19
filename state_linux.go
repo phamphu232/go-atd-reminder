@@ -38,11 +38,6 @@ func getLoginctlProperty(user, property string) string {
 // 	return t
 // }
 
-func IsWorking(user string) bool {
-	isActive := getLoginctlProperty(user, "State") == "active"
-	isWorking := isActive && !IsScreenLocked(user)
-
-	// log.Printf("UserIsWorking: %v, IsLocked: %v", isWorking, IsScreenLocked(user))
-
-	return isWorking
+func IsActive(user string) bool {
+	return getLoginctlProperty(user, "State") == "active"
 }

@@ -19,12 +19,12 @@ type Attendance struct {
 }
 
 type State struct {
-	mu                 sync.Mutex // Protects the state
-	CurrentDate        string
-	IsReminderCheckIn  bool
-	IsReminderCheckOut bool
-	IsWorking          bool
-	LastChangeTime     time.Time
+	mu                  sync.Mutex // Protects the state
+	CurrentDate         string
+	hasNotifiedCheckIn  bool
+	hasNotifiedCheckOut bool
+	IsWorking           bool
+	LastChangeTime      time.Time
 }
 
 var currentState State
@@ -34,8 +34,8 @@ func (s *State) ResetIfNewDay(today string) {
 	defer s.mu.Unlock()
 	if s.CurrentDate != today {
 		s.CurrentDate = today
-		s.IsReminderCheckIn = false
-		s.IsReminderCheckOut = false
+		s.hasNotifiedCheckIn = false
+		s.hasNotifiedCheckOut = false
 	}
 }
 
@@ -77,55 +77,54 @@ func checkAttendance() {
 
 	currentState.ResetIfNewDay(today)
 
-	isWorking := IsWorking(config.GetConfig().UserPC)
-	workEnd := config.GetConfig().WorkTimeEnd
-
-	currentState.mu.Lock()
-	defer currentState.mu.Unlock()
-
 	if currentState.LastChangeTime.IsZero() {
 		currentState.LastChangeTime = time.Now()
 	}
 
+	isActive := IsActive(config.GetConfig().UserPC)
+	IsScreenLocked := IsScreenLocked(config.GetConfig().UserPC)
+
+	workEnd := config.GetConfig().WorkTimeEnd
+
+	isWorking := isActive && !IsScreenLocked
+
 	duration := now.Sub(currentState.LastChangeTime)
 
 	if isWorking != currentState.IsWorking {
+		log.Printf("Now: %s, IsWorking: %v, IsScreenLocked: %v, hasNotifiedCheckIn: %v, hasNotifiedCheckOut: %v, LastChangeTime: %s, Duration: %v, Config Delay: %d", now.Format("2006-01-02 15:04:05"), isActive, IsScreenLocked, currentState.hasNotifiedCheckIn, currentState.hasNotifiedCheckOut, currentState.LastChangeTime.Format("2006-01-02 15:04:05"), duration, config.GetConfig().Delay)
 		currentState.IsWorking = isWorking
 		currentState.LastChangeTime = time.Now()
-		log.Printf("UserIsWorking: %v, IsLocked: %v, LastChangeTime: %s, Duration: %v", isWorking, IsScreenLocked(config.GetConfig().UserPC), currentState.LastChangeTime.Format("2006-01-02 15:04:05"), duration)
 	}
 
-	if config.GetConfig().ReminderCheckIn && isWorking && !currentState.IsReminderCheckIn && currentTime < workEnd && duration.Seconds() > float64(config.GetConfig().Delay) {
+	if config.GetConfig().ReminderCheckIn && isWorking && !currentState.hasNotifiedCheckIn && currentTime < workEnd && duration.Seconds() > float64(config.GetConfig().Delay) {
 		atd, err := GetLatestAttendance(config.GetConfig().UserIdAtd)
 		if err != nil {
 			log.Printf("Database error: %v", err)
 			return
 		}
 
-		hasCheckedInToday := atd != nil && atd.DateCheck == today
-
-		if !hasCheckedInToday {
-			log.Printf("ReminderCheckIn: %v, isWorking: %v, currentState.IsReminderCheckIn: %v, currentTime: %s, workEnd: %s, duration: %s, config.GetConfig().Delay: %d, atd.DateCheck: %s, today: %s", config.GetConfig().ReminderCheckIn, isWorking, currentState.IsReminderCheckIn, currentTime, workEnd, duration, config.GetConfig().Delay, atd.DateCheck, today)
+		hasCheckInToday := atd != nil && atd.DateCheck == today
+		if !currentState.hasNotifiedCheckIn && !hasCheckInToday {
+			log.Printf("PostToGoogleChat Notify Check In, DateCheck: %s", atd.DateCheck)
 			PostToGoogleChat(config.GetConfig().ReminderCheckInMessage, config.GetConfig().GoogleWebhook)
-			currentState.IsReminderCheckIn = true
-
+			currentState.hasNotifiedCheckIn = true
 		}
 	}
 
-	if config.GetConfig().ReminderCheckOut && !isWorking && !currentState.IsReminderCheckOut && currentTime > workEnd && duration.Seconds() > float64(config.GetConfig().Delay) {
+	if config.GetConfig().ReminderCheckOut && !isWorking && !currentState.hasNotifiedCheckOut && currentTime > workEnd && duration.Seconds() > float64(config.GetConfig().Delay) {
 		atd, err := GetLatestAttendance(config.GetConfig().UserIdAtd)
 		if err != nil {
 			log.Printf("Database error: %v", err)
 			return
 		}
 
-		hasCheckedInToday := atd != nil && atd.DateCheck == today
-		needsCheckOut := hasCheckedInToday && (!atd.CheckOut.Valid || atd.CheckOut.String < workEnd)
+		hasCheckInToday := atd != nil && atd.DateCheck == today
+		needsCheckOut := !currentState.hasNotifiedCheckOut && hasCheckInToday && (!atd.CheckOut.Valid || atd.CheckOut.String < workEnd)
 
 		if needsCheckOut {
-			log.Printf("ReminderCheckOut: %v, isWorking: %v, currentState.IsReminderCheckOut: %v, currentTime: %s, atd.CheckOut: %s, workEnd: %s, duration: %s, config.GetConfig().Delay: %d, atd.DateCheck: %s, today: %s", config.GetConfig().ReminderCheckOut, isWorking, currentState.IsReminderCheckOut, currentTime, atd.CheckOut.String, workEnd, duration, config.GetConfig().Delay, atd.DateCheck, today)
+			log.Printf("PostToGoogleChat Notify Check Out, DateCheck: %s", atd.DateCheck)
 			PostToGoogleChat(config.GetConfig().ReminderCheckOutMessage, config.GetConfig().GoogleWebhook)
-			currentState.IsReminderCheckOut = true
+			currentState.hasNotifiedCheckOut = true
 		}
 	}
 }

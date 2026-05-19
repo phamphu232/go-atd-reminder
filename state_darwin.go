@@ -6,6 +6,6 @@ package main
 // 	return time.Now()
 // }
 
-func IsWorking(user string) bool {
+func IsActive(user string) bool {
 	return false
 }

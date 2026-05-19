@@ -29,11 +29,6 @@ func getUserState(user string) bool {
 	return strings.Contains(strings.ToLower(string(output)), "explorer.exe")
 }
 
-func IsWorking(user string) bool {
-	isActive := getUserState(user)
-	isWorking := isActive && !IsScreenLocked(user)
-
-	// log.Printf("UserIsWorking: %v, IsLocked: %v", isWorking, IsScreenLocked())
-
-	return isWorking
+func IsActive(user string) bool {
+	return getUserState(user)
 }
