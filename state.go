@@ -81,19 +81,20 @@ func checkAttendance() {
 		currentState.LastChangeTime = time.Now()
 	}
 
-	isActive := IsActive(config.GetConfig().UserPC)
-	IsScreenLocked := IsScreenLocked(config.GetConfig().UserPC)
+	activeState := IsActive(config.GetConfig().UserPC)
+	screenLockedState := IsScreenLocked(config.GetConfig().UserPC)
+
+	isWorking := activeState && !screenLockedState
 
 	workEnd := config.GetConfig().WorkTimeEnd
-
-	isWorking := isActive && !IsScreenLocked
 
 	duration := now.Sub(currentState.LastChangeTime)
 
 	if isWorking != currentState.IsWorking {
-		log.Printf("Now: %s, IsWorking: %v, IsScreenLocked: %v, hasNotifiedCheckIn: %v, hasNotifiedCheckOut: %v, LastChangeTime: %s, Duration: %v, Config Delay: %d", now.Format("2006-01-02 15:04:05"), isActive, IsScreenLocked, currentState.hasNotifiedCheckIn, currentState.hasNotifiedCheckOut, currentState.LastChangeTime.Format("2006-01-02 15:04:05"), duration, config.GetConfig().Delay)
+		log.Printf("isWorking: %v, isScreenLocked: %v, hasNotifiedCheckIn: %v, hasNotifiedCheckOut: %v, LastChangeTime: %s, Duration: %v, Config Delay: %d", isWorking, screenLockedState, currentState.hasNotifiedCheckIn, currentState.hasNotifiedCheckOut, currentState.LastChangeTime.Format("2006-01-02 15:04:05"), duration, config.GetConfig().Delay)
 		currentState.IsWorking = isWorking
 		currentState.LastChangeTime = time.Now()
+		duration = 0
 	}
 
 	if config.GetConfig().ReminderCheckIn && isWorking && !currentState.hasNotifiedCheckIn && currentTime < workEnd && duration.Seconds() > float64(config.GetConfig().Delay) {
@@ -105,7 +106,7 @@ func checkAttendance() {
 
 		hasCheckInToday := atd != nil && atd.DateCheck == today
 		if !currentState.hasNotifiedCheckIn && !hasCheckInToday {
-			log.Printf("PostToGoogleChat Notify Check In, DateCheck: %s", atd.DateCheck)
+			log.Printf("PostToGoogleChat Notify Check In, DateCheck: %s CheckIn: %s", atd.DateCheck, atd.CheckIn.String)
 			PostToGoogleChat(config.GetConfig().ReminderCheckInMessage, config.GetConfig().GoogleWebhook)
 			currentState.hasNotifiedCheckIn = true
 		}
@@ -122,7 +123,7 @@ func checkAttendance() {
 		needsCheckOut := !currentState.hasNotifiedCheckOut && hasCheckInToday && (!atd.CheckOut.Valid || atd.CheckOut.String < workEnd)
 
 		if needsCheckOut {
-			log.Printf("PostToGoogleChat Notify Check Out, DateCheck: %s", atd.DateCheck)
+			log.Printf("PostToGoogleChat Notify Check Out, DateCheck: %s CheckOut: %s", atd.DateCheck, atd.CheckOut.String)
 			PostToGoogleChat(config.GetConfig().ReminderCheckOutMessage, config.GetConfig().GoogleWebhook)
 			currentState.hasNotifiedCheckOut = true
 		}
